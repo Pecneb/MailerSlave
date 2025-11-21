@@ -98,6 +98,40 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.DS_Store
+frontend/*.tsbuildinfo
+
+# Backend
+backend/__pycache__/
+backend/*.pyc
+backend/venv/
+backend/.venv/
+
+# MongoDB data
+data/
+mongodb_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 #uv.lock
 
 # poetry
