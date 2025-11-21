@@ -11,6 +11,7 @@ export default function ContactsPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState<any>(null);
+  const [customFields, setCustomFields] = useState<Array<{ key: string; value: string }>>([]);
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ['contacts'],
@@ -40,15 +41,40 @@ export default function ContactsPage() {
     },
   });
 
+  const addCustomField = () => {
+    setCustomFields([...customFields, { key: '', value: '' }]);
+  };
+
+  const removeCustomField = (index: number) => {
+    setCustomFields(customFields.filter((_, i) => i !== index));
+  };
+
+  const updateCustomField = (index: number, field: 'key' | 'value', value: string) => {
+    const updated = [...customFields];
+    updated[index][field] = value;
+    setCustomFields(updated);
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    // Build custom_fields object
+    const custom_fields: Record<string, string> = {};
+    customFields.forEach(field => {
+      if (field.key.trim()) {
+        custom_fields[field.key] = field.value;
+      }
+    });
+    
     const contact: ContactCreate = {
       email: formData.get('email') as string,
       first_name: formData.get('first_name') as string,
       last_name: formData.get('last_name') as string,
+      custom_fields: Object.keys(custom_fields).length > 0 ? custom_fields : undefined,
     };
     createMutation.mutate(contact);
+    setCustomFields([]);
   };
 
   return (
@@ -77,7 +103,7 @@ export default function ContactsPage() {
                 type="email"
                 name="email"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-gray-900"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -86,7 +112,7 @@ export default function ContactsPage() {
                 <input
                   type="text"
                   name="first_name"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -94,10 +120,55 @@ export default function ContactsPage() {
                 <input
                   type="text"
                   name="last_name"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-gray-900"
                 />
               </div>
             </div>
+
+            {/* Custom Fields */}
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Fields
+                </label>
+                <button
+                  type="button"
+                  onClick={addCustomField}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  + Add Field
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Add custom fields like company, role, product, etc. to use as $variables in templates
+              </p>
+              {customFields.map((field, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Field name (e.g., company)"
+                    value={field.key}
+                    onChange={(e) => updateCustomField(index, 'key', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value (e.g., Acme Corp)"
+                    value={field.value}
+                    onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCustomField(index)}
+                    className="px-3 py-2 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <div className="flex space-x-3">
               <button
                 type="submit"

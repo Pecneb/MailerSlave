@@ -25,7 +25,7 @@ export default function EmailsPage() {
           <tbody className="divide-y divide-gray-200">
             {emails?.map((email) => (
               <tr key={email._id}>
-                <td className="px-6 py-4 text-sm">{email.subject}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">{email.subject}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                     email.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'

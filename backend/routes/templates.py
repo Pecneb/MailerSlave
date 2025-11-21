@@ -8,6 +8,7 @@ from datetime import datetime
 from backend.models import TemplateCreate, TemplateUpdate, TemplateResponse
 from backend.database import get_database
 from backend.services.template_service import TemplateService
+from backend.services.ollama_service import OllamaService
 
 router = APIRouter()
 
@@ -16,6 +17,20 @@ router = APIRouter()
 async def create_template(template: TemplateCreate):
     """Create a new email template."""
     db = get_database()
+
+    # If LLM is enabled, verify Ollama is available
+    if template.use_llm:
+        ollama_service = OllamaService()
+        if not ollama_service.test_connection():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                detail="Ollama service is not available. Please ensure Ollama is running."
+            )
+        if not ollama_service.check_model_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                detail=f"Ollama model '{ollama_service.model}' is not available. Please pull the model first."
+            )
     
     # Extract placeholders from template content
     placeholders = TemplateService.extract_placeholders(template.content)
