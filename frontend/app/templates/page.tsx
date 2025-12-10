@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { templatesApi } from '@/lib/api';
-import { Plus, FileText, X } from 'lucide-react';
+import { Plus, FileText, X, Edit } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import type { TemplateCreate } from '@/lib/types';
@@ -10,6 +10,7 @@ import type { TemplateCreate } from '@/lib/types';
 export default function TemplatesPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
 
   const { data: templates, isLoading, error } = useQuery({
     queryKey: ['templates'],
@@ -28,6 +29,19 @@ export default function TemplatesPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TemplateCreate> }) => 
+      templatesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast.success('Template updated successfully');
+      setEditingTemplate(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to update template');
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -38,7 +52,21 @@ export default function TemplatesPage() {
       description: formData.get('description') as string,
       use_llm: formData.get('use_llm') === 'on',
     };
-    createMutation.mutate(template);
+    
+    if (editingTemplate) {
+      updateMutation.mutate({ id: editingTemplate._id, data: template });
+    } else {
+      createMutation.mutate(template);
+    }
+  };
+
+  const handleEdit = (template: any) => {
+    setEditingTemplate(template);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingTemplate(null);
   };
 
   if (isLoading) {
@@ -76,14 +104,16 @@ export default function TemplatesPage() {
         </button>
       </div>
 
-      {/* Create Template Modal */}
-      {showForm && (
+      {/* Create/Edit Template Modal */}
+      {(showForm || editingTemplate) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Create New Template</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingTemplate ? 'Edit Template' : 'Create New Template'}
+              </h2>
               <button 
-                onClick={() => setShowForm(false)}
+                onClick={handleCloseForm}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -99,6 +129,7 @@ export default function TemplatesPage() {
                   type="text"
                   name="name"
                   required
+                  defaultValue={editingTemplate?.name || ''}
                   placeholder="e.g., Welcome Email"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
                 />
@@ -112,6 +143,7 @@ export default function TemplatesPage() {
                   type="text"
                   name="subject"
                   required
+                  defaultValue={editingTemplate?.subject || ''}
                   placeholder="e.g., Welcome to our platform!"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
                 />
@@ -124,6 +156,7 @@ export default function TemplatesPage() {
                 <input
                   type="text"
                   name="description"
+                  defaultValue={editingTemplate?.description || ''}
                   placeholder="Optional description for this template"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
                 />
@@ -137,6 +170,7 @@ export default function TemplatesPage() {
                   name="content"
                   required
                   rows={10}
+                  defaultValue={editingTemplate?.content || ''}
                   placeholder="Hi $first_name,&#10;&#10;Welcome to our platform!&#10;&#10;You can use variables like $first_name, $last_name, $company, etc."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm text-gray-900"
                 />
@@ -150,6 +184,7 @@ export default function TemplatesPage() {
                   type="checkbox"
                   name="use_llm"
                   id="use_llm"
+                  defaultChecked={editingTemplate?.use_llm || false}
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
                 <label htmlFor="use_llm" className="ml-2 block text-sm text-gray-700">
@@ -160,14 +195,17 @@ export default function TemplatesPage() {
               <div className="flex space-x-3 pt-4">
                 <button
                   type="submit"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                   className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {createMutation.isPending ? 'Creating...' : 'Create Template'}
+                  {editingTemplate 
+                    ? (updateMutation.isPending ? 'Updating...' : 'Update Template')
+                    : (createMutation.isPending ? 'Creating...' : 'Create Template')
+                  }
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={handleCloseForm}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                 >
                   Cancel
@@ -203,6 +241,15 @@ export default function TemplatesPage() {
                 <span className="text-xs text-gray-400">
                   {template.placeholders.length} variables
                 </span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => handleEdit(template)}
+                  className="w-full inline-flex items-center justify-center px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Template
+                </button>
               </div>
             </div>
           ))}
